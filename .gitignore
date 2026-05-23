@@ -1,0 +1,51 @@
+# --- OS files ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+*.sublime-workspace
+*.sublime-project
+
+# --- Vim ---
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# --- macOS ---
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# --- Linux ---
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# --- Local notes / drafts ---
+drafts/
+notes-private/
+*.local.md
+TODO.local
