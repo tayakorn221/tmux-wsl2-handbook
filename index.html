@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tmux · WSL2 Handbook — คู่มือฉบับเข้าใจถึงแก่น</title>
+<meta name="description" content="คู่มืออ้างอิง tmux บน Windows 11 + WSL2 (Ubuntu) ภาษาไทย — concept, ติดตั้ง, basics, config, workflow templates, integration, cheat sheet, troubleshooting · single-file HTML">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#faf7f1; --paper-2:#f2ede3; --ink:#222b2e; --ink-soft:#54625f;
+  --line:#ddd5c6; --line2:#cbbfa8; --teal:#0e6e63; --teal-deep:#0a5048; --teal-soft:#e2eeea;
+  --amber:#c07415; --amber-soft:#f8ecd8; --red:#b3402e; --red-soft:#f6e3de;
+  --blue:#2c5cc5; --blue-soft:#e3e9f7;
+  --code-bg:#26302f; --code-ink:#e8e3d6;
+  --l0:#5a8a5e; --l0-soft:#e6efe4;
+  --l1:#0e6e63; --l1-soft:#e2eeea;
+  --l2:#c07415; --l2-soft:#f8ecd8;
+  --l3:#c2562a; --l3-soft:#f8e6dc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:2rem}
+body{background:var(--paper);color:var(--ink);font-family:'Anuphan',sans-serif;font-size:17px;line-height:1.85;-webkit-font-smoothing:antialiased}
+::selection{background:var(--teal);color:#fff}
+
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--teal);width:0;z-index:99}
+
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr);max-width:1300px;margin:0 auto}
+@media(max-width:1080px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+.sidebar{border-right:1px solid var(--line);padding:2.4rem 1.5rem 2.4rem 2rem}
+.sidebar-inner{position:sticky;top:1.8rem;max-height:calc(100vh - 3.6rem);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.brand{font-family:'Bai Jamjuree',sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:.02em;color:var(--teal-deep)}
+.brand .arrow{color:var(--amber)}
+.brand small{display:block;font-family:'Anuphan';font-weight:500;font-size:.78rem;color:var(--ink-soft);margin-top:.2rem}
+.toc{list-style:none;margin-top:1.5rem}
+.toc .grp{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin:1.1rem 0 .35rem .7rem;display:flex;align-items:center;gap:.45rem}
+.toc .grp::before{content:"";width:9px;height:9px;border-radius:2px;background:var(--gc,var(--teal))}
+.toc li a{display:flex;gap:.6rem;align-items:baseline;padding:.36rem .7rem;border-radius:7px;color:var(--ink-soft);text-decoration:none;font-size:.9rem;font-weight:500;transition:background .15s,color .15s}
+.toc li a .n{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--amber);min-width:1.5em}
+.toc li a:hover{background:var(--paper-2);color:var(--ink)}
+.toc li a.active{background:var(--teal-soft);color:var(--teal-deep);font-weight:600}
+.toc li a.active .n{color:var(--teal)}
+#tocToggle{display:none;margin-top:.9rem;padding:.4rem .9rem;border:1px solid var(--line);background:#fff;border-radius:7px;font-family:'Anuphan';font-size:.85rem;cursor:pointer;color:var(--ink-soft)}
+@media(max-width:1080px){
+  .sidebar{border-right:0;border-bottom:1px solid var(--line);padding:1.4rem}
+  .sidebar-inner{position:static;max-height:none;overflow:visible}
+  .toc{display:none}.toc.open{display:block}#tocToggle{display:inline-block}
+}
+
+main{padding:0 clamp(1.3rem,4vw,4.5rem) 6rem;max-width:880px}
+
+.hero{padding:4.5rem 0 3.2rem;border-bottom:1px solid var(--line)}
+.hero .kicker{font-family:'IBM Plex Mono',monospace;font-size:.78rem;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}
+.hero h1{font-family:'Bai Jamjuree',sans-serif;font-weight:700;font-size:clamp(2.1rem,5vw,3.3rem);line-height:1.2;margin:.7rem 0 1.1rem}
+.hero h1 .g{color:var(--teal)}
+.hero h1 .arrow{color:var(--amber);font-family:'IBM Plex Mono',monospace}
+.hero p.lead{font-size:1.07rem;color:var(--ink-soft);max-width:42em}
+.hero .meta{display:flex;flex-wrap:wrap;gap:.6rem 1.6rem;margin-top:1.6rem;font-size:.83rem;color:var(--ink-soft)}
+.hero .meta b{color:var(--ink);font-weight:600}
+
+.chapter{padding-top:4rem}
+.ch-head{border-bottom:2px solid var(--ink);padding-bottom:.85rem;margin-bottom:1.7rem}
+.ch-head .row{display:flex;align-items:baseline;gap:1.1rem}
+.ch-head .num{font-family:'Bai Jamjuree',sans-serif;font-weight:700;font-size:2.5rem;line-height:1;color:var(--amber)}
+.ch-head h2{font-family:'Bai Jamjuree',sans-serif;font-weight:700;font-size:clamp(1.3rem,2.6vw,1.7rem);line-height:1.3}
+
+h3{font-family:'Bai Jamjuree',sans-serif;font-weight:600;font-size:1.18rem;margin:2.5rem 0 .8rem;color:var(--teal-deep)}
+h4{font-family:'Bai Jamjuree',sans-serif;font-weight:600;font-size:1rem;margin:1.7rem 0 .5rem}
+p{margin:.85rem 0}strong{font-weight:600}
+ul,ol{margin:.8rem 0 1rem 1.5rem}li{margin:.35rem 0}li::marker{color:var(--amber)}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:var(--paper-2);border:1px solid var(--line);padding:.08em .4em;border-radius:5px;white-space:nowrap}
+kbd{font-family:'IBM Plex Mono',monospace;font-size:.78em;background:#fff;border:1px solid var(--line2);border-bottom-width:2px;padding:.1em .45em;border-radius:5px;color:var(--teal-deep);white-space:nowrap}
+
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'IBM Plex Mono',monospace;font-size:.8rem;line-height:1.75;padding:1.1rem 1.3rem;border-radius:10px;overflow-x:auto;margin:1.2rem 0}
+pre code{background:none;border:0;padding:0;color:inherit;white-space:pre;font-size:inherit}
+pre .c{color:#8fa39b}      /* comment */
+pre .k{color:#f0b35e}      /* command / keyword */
+pre .a{color:#9ed0b5}      /* arg / string */
+pre .o{color:#a9b6b2}      /* output */
+pre .p{color:#e88c74}      /* prompt / operator */
+pre .v{color:#7fb4e6}      /* variable / flag */
+
+table{width:100%;border-collapse:collapse;margin:1.4rem 0;font-size:.9rem;line-height:1.55}
+th{font-family:'Bai Jamjuree',sans-serif;font-weight:600;text-align:left;background:var(--ink);color:var(--paper);padding:.55rem .8rem;font-size:.83rem}
+th:first-child{border-radius:8px 0 0 0}th:last-child{border-radius:0 8px 0 0}
+td{padding:.55rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
+tr:nth-child(even) td{background:rgba(242,237,227,.55)}
+td b{font-weight:600;color:var(--teal-deep)}
+td code{font-size:.86em}
+
+.note,.warn,.use{margin:1.6rem 0;padding:1rem 1.2rem .95rem;border-radius:10px;font-size:.94rem}
+.note{background:var(--teal-soft)}.warn{background:var(--red-soft)}.use{background:var(--amber-soft)}
+.note .t,.warn .t,.use .t{font-family:'Bai Jamjuree',sans-serif;font-weight:600;font-size:.86rem;display:block;margin-bottom:.3rem}
+.note .t{color:var(--teal-deep)}.warn .t{color:var(--red)}.use .t{color:var(--amber)}
+
+.fig{margin:2.2rem 0;padding:1.6rem 1.4rem 1.1rem;background:#fff;border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.fig svg{width:100%;height:auto;display:block;min-width:520px}
+.fig figcaption{margin-top:.9rem;padding-top:.7rem;border-top:1px dashed var(--line);font-size:.83rem;color:var(--ink-soft)}
+.fig figcaption b{color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:.76rem}
+.fig text{font-family:'Anuphan',sans-serif}
+.fig .lbl{font-size:13px;font-weight:600;fill:var(--ink)}
+.fig .lbl-w{font-size:13px;font-weight:600;fill:#fff}
+.fig .sub{font-size:11px;fill:var(--ink-soft)}
+.fig .sub-w{font-size:11px;fill:#cfd8d3}
+.fig .mono{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:var(--ink-soft)}
+.fig .mono-t{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:var(--teal-deep);font-weight:600}
+.fig .mono-a{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:var(--amber);font-weight:600}
+.fig .flow{stroke:var(--ink-soft);stroke-width:1.5;fill:none}
+.fig .flow-t{stroke:var(--teal);stroke-width:1.7;fill:none}
+.fig .flow-a{stroke:var(--amber);stroke-width:1.7;fill:none}
+.fig .dash{stroke-dasharray:5 4}
+
+.chapter-end{margin-top:3.2rem;text-align:center;color:var(--amber);font-family:'IBM Plex Mono',monospace;font-size:.8rem;letter-spacing:.5em}
+footer{margin-top:5rem;padding-top:2rem;border-top:2px solid var(--ink);font-size:.88rem;color:var(--ink-soft)}
+footer b{color:var(--ink)}
+
+@media print{
+  #progress,.sidebar,#tocToggle{display:none}
+  .layout{display:block}main{max-width:100%;padding:0}
+  .fig,table,pre,.note,.warn,.use{break-inside:avoid}
+  .fig svg{min-width:0}.chapter{padding-top:2rem}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M1,1 L8,4.5 L1,8 Z" fill="#54625f"/></marker>
+  <marker id="ar-t" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M1,1 L8,4.5 L1,8 Z" fill="#0e6e63"/></marker>
+  <marker id="ar-a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M1,1 L8,4.5 L1,8 Z" fill="#c07415"/></marker>
+</defs></svg>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="sidebar-inner">
+    <div class="brand">tmux <span class="arrow">·</span> WSL2<small>คู่มืออ้างอิงฉบับเข้าใจถึงแก่น</small></div>
+    <button id="tocToggle">☰ สารบัญ</button>
+    <ul class="toc" id="toc">
+      <li class="grp" style="--gc:var(--l0)">ปูพื้น</li>
+      <li><a href="#s1"><span class="n">01</span>Concept พื้นฐาน</a></li>
+      <li><a href="#s2"><span class="n">02</span>การติดตั้ง</a></li>
+      <li class="grp" style="--gc:var(--l1)">ใช้งาน</li>
+      <li><a href="#s3"><span class="n">03</span>tmux Basics</a></li>
+      <li><a href="#s4"><span class="n">04</span>Configuration</a></li>
+      <li><a href="#s5"><span class="n">05</span>Workflow Templates</a></li>
+      <li class="grp" style="--gc:var(--l2)">เชื่อม Windows</li>
+      <li><a href="#s6"><span class="n">06</span>WSL2 ↔ Windows</a></li>
+      <li><a href="#s7"><span class="n">07</span>Cheat Sheet</a></li>
+      <li class="grp" style="--gc:var(--l3)">แก้ปัญหา &amp; ต่อยอด</li>
+      <li><a href="#s8"><span class="n">08</span>Troubleshooting</a></li>
+      <li><a href="#s9"><span class="n">09</span>ขั้นต่อไป (Advanced)</a></li>
+    </ul>
+  </div>
+</aside>
+
+<main>
+<header class="hero">
+  <div class="kicker">tmux + WSL2 Handbook · reference · 9 sections</div>
+  <h1>เชี่ยวชาญ <span class="g">tmux</span> บน <span class="g">WSL2</span><br><span class="arrow">·</span> single source of truth</h1>
+  <p class="lead">คู่มืออ้างอิงส่วนตัวสำหรับใช้ tmux บน Windows 11 + WSL2 (Ubuntu) — workflow ของ data analyst + freelance web dev เน้นเข้าใจ mental model แล้วกลับมาเปิดดูได้ตลอด</p>
+  <div class="meta">
+    <span>Stack: <b>WSL2 · Claude Code · dbt · PostgreSQL · Next.js · Docker</b></span>
+  </div>
+  <div class="meta">
+    <span>ทดสอบกับ: <b>Ubuntu 22.04 / 24.04 · tmux 3.2a / 3.4</b></span>
+    <span>Prefix: <b>Ctrl+a</b></span>
+  </div>
+</header>
+
+<!-- ============================ S1 ============================ -->
+<section class="chapter" id="s1">
+  <div class="ch-head"><div class="row"><div class="num">01</div><h2>Concept พื้นฐาน</h2></div></div>
+
+  <h3>WSL2 คืออะไร</h3>
+  <p>WSL2 (Windows Subsystem for Linux v2) คือ <strong>Linux kernel จริง</strong> ที่รันใน lightweight virtual machine ของ Hyper-V บน Windows 11 ทำให้รัน distro อย่าง Ubuntu, Debian, Fedora ได้แบบ native ภายใน Windows โดยไม่ต้อง dual boot และไม่ต้องเปิด VirtualBox/VMware แยก</p>
+  <table>
+    <thead><tr><th>ประเด็น</th><th>WSL1</th><th>WSL2</th></tr></thead>
+    <tbody>
+      <tr><td><b>สถาปัตยกรรม</b></td><td>แปลง syscall Linux → Windows NT (translation layer)</td><td>Linux kernel จริงใน Hyper-V VM</td></tr>
+      <tr><td><b>ความเข้ากันได้</b></td><td>บาง syscall ไม่รองรับ (Docker daemon รันไม่ได้)</td><td>รองรับ Linux เกือบ 100% — Docker, systemd ใช้ได้</td></tr>
+      <tr><td><b>Disk I/O (ใน Linux FS)</b></td><td>ช้า</td><td>เร็วกว่า WSL1 หลายเท่า</td></tr>
+      <tr><td><b>Disk I/O (ข้าม <code>/mnt/c/</code>)</b></td><td>เร็วกว่า WSL2</td><td>ช้ามาก (ผ่าน 9P protocol)</td></tr>
+      <tr><td><b>RAM</b></td><td>ใช้ตามจริง</td><td>จองล่วงหน้า ปรับ cap ได้ใน <code>.wslconfig</code></td></tr>
+      <tr><td><b>Network</b></td><td>ใช้ stack ของ Windows ตรง ๆ</td><td>virtual NIC แยก + port forwarding อัตโนมัติ</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><span class="t">สรุป</span>WSL2 เป็นค่า default ปัจจุบันและเป็นตัวเลือกที่ถูกต้องสำหรับ dev workflow ทั้งหมด ยกเว้นกรณีพิเศษที่ต้องการ I/O cross-OS เร็ว ๆ (เกือบไม่มีในงานจริง)</div>
+
+  <h3>tmux คืออะไร</h3>
+  <p>tmux (terminal multiplexer) คือโปรแกรมที่ให้รัน terminal session หลายอันใน window เดียว และที่สำคัญที่สุดคือ <strong>session ทำงานต่อใน background ได้แม้ปิด terminal ไปแล้ว</strong> — กลับมา <code>tmux attach</code> ก็ได้ทุก process ที่รันอยู่กลับคืน</p>
+
+  <h4>tmux ต่างจาก Windows Terminal tab อย่างไร</h4>
+  <table>
+    <thead><tr><th>ประเด็น</th><th>Windows Terminal tab/pane</th><th>tmux</th></tr></thead>
+    <tbody>
+      <tr><td><b>Persistence</b></td><td>ปิด terminal = process ตายหมด</td><td>detach แล้ว process ยังรันใน background</td></tr>
+      <tr><td><b>Remote/SSH</b></td><td>tab อยู่ฝั่ง Windows เท่านั้น</td><td>session อยู่ฝั่ง server — SSH ขาดแล้ว reconnect ทำงานต่อได้</td></tr>
+      <tr><td><b>Layout templates</b></td><td>ทำไม่ได้</td><td>scriptable ผ่าน shell หรือ tmuxinator/tmuxp</td></tr>
+      <tr><td><b>Keybinding</b></td><td>จำกัด</td><td>rebind ได้ทั้งหมด</td></tr>
+      <tr><td><b>Cross-platform</b></td><td>Windows only</td><td>ทุก Unix-like ใช้ config เดียวกันได้</td></tr>
+    </tbody>
+  </table>
+  <p><strong>ใช้คู่กัน:</strong> Windows Terminal เป็น "หน้าต่าง" → เปิด WSL2 → ใน WSL2 รัน tmux เพื่อจัดการ session/window/pane</p>
+
+  <h3>Mental Model 4 ชั้น</h3>
+  <p>นี่คือแบบจำลองที่ทำให้ทุกอย่างที่เหลือเข้าใจง่าย — tmux ซ้อนกัน 4 ชั้นจากนอกสุดเข้าใน:</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="โครงสร้าง 4 ชั้นของ tmux ซ้อนกัน: server ครอบ session, session ครอบ window, window ครอบ pane">
+      <rect x="20" y="20" width="660" height="240" rx="14" fill="none" stroke="#a33327" stroke-width="1.6"/>
+      <text x="36" y="42" class="lbl" fill="#a33327">tmux server — daemon (1 ตัวต่อ user)</text>
+      <rect x="44" y="56" width="612" height="190" rx="12" fill="#f8ecd8" stroke="#c07415" stroke-width="1.5"/>
+      <text x="60" y="78" class="lbl" fill="#c07415">session — "โปรเจกต์" (kmutt, nextjs) · detach/attach อิสระ</text>
+      <rect x="68" y="92" width="564" height="140" rx="11" fill="#e2eeea" stroke="#0e6e63" stroke-width="1.5"/>
+      <text x="84" y="114" class="lbl" fill="#0e6e63">window — "tab" (1, 2, 3) · มี layout pane ของตัวเอง</text>
+      <rect x="92" y="128" width="258" height="90" rx="9" fill="#fff" stroke="#54625f" stroke-width="1.3"/>
+      <text x="221" y="160" text-anchor="middle" class="lbl">pane</text>
+      <text x="221" y="180" text-anchor="middle" class="sub">terminal จริง (code)</text>
+      <rect x="362" y="128" width="258" height="90" rx="9" fill="#fff" stroke="#54625f" stroke-width="1.3"/>
+      <text x="491" y="160" text-anchor="middle" class="lbl">pane</text>
+      <text x="491" y="180" text-anchor="middle" class="sub">terminal จริง (logs)</text>
+    </svg>
+    <figcaption><b>FIG 1.1</b> — <code>server → session → window → pane</code> · server เกิดอัตโนมัติเมื่อสั่ง <code>tmux</code> ครั้งแรก ดับเมื่อทุก session หาย · pane คือ shell จริงที่รันโปรแกรม</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>ชั้น</th><th>ทำหน้าที่อะไร</th><th>analogy</th></tr></thead>
+    <tbody>
+      <tr><td><b>server</b></td><td>daemon ดูแลทุก session — เกิดเมื่อสั่ง <code>tmux</code> ครั้งแรก ดับเมื่อทุก session หาย</td><td>บริการระบบ</td></tr>
+      <tr><td><b>session</b></td><td>หน่วยใหญ่สุด — ตั้งชื่อได้ (<code>kmutt</code>, <code>nextjs</code>) detach/attach อิสระ</td><td>"โปรเจกต์"</td></tr>
+      <tr><td><b>window</b></td><td>เหมือน tab — มีหมายเลข ตั้งชื่อได้ แต่ละ window มี layout pane ของตัวเอง</td><td>"tab"</td></tr>
+      <tr><td><b>pane</b></td><td>terminal จริง — รัน shell หนึ่งตัว split window เป็นหลายส่วน</td><td>"split"</td></tr>
+    </tbody>
+  </table>
+
+  <h3>ทำไมต้องใช้ tmux + WSL2 คู่กัน</h3>
+  <table>
+    <thead><tr><th>ปัญหาที่แก้</th><th>tmux ช่วยอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>Windows Terminal crash / restart เครื่อง</td><td>session ใน tmux ยังอยู่ (ตราบใดที่ WSL2 ยังไม่ shutdown)</td></tr>
+      <tr><td>ต้องเปิดหลาย tab สำหรับโปรเจกต์เดียว</td><td>จัด pane ใน window เดียว เห็นทุกอย่างพร้อมกัน</td></tr>
+      <tr><td>ลืมว่าทำอะไรไว้เมื่อวาน</td><td>attach กลับ ได้ทุก process + history + layout เดิม</td></tr>
+      <tr><td>Long-running job (dbt run, npm build)</td><td>detach ทิ้งไว้ — ไม่ต้องคา terminal เปิดทั้งวัน</td></tr>
+      <tr><td>ต้องโชว์งาน 2 หน้าจอ</td><td>window สำหรับ code, อีก window สำหรับ logs/db — สลับด้วย keystroke</td></tr>
+    </tbody>
+  </table>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S2 ============================ -->
+<section class="chapter" id="s2">
+  <div class="ch-head"><div class="row"><div class="num">02</div><h2>การติดตั้ง</h2></div></div>
+
+  <h3>2.1 เช็คก่อนว่ามี WSL2 อยู่หรือยัง</h3>
+  <p>เปิด <strong>PowerShell</strong> (ไม่ต้อง admin):</p>
+  <pre><code><span class="k">wsl</span> <span class="v">-l -v</span></code></pre>
+  <p>ผลลัพธ์ที่เป็นไปได้:</p>
+  <ul>
+    <li>ขึ้น list distro พร้อม <code>VERSION 2</code> → มี WSL2 แล้ว ข้ามไป 2.3</li>
+    <li>ขึ้น list แต่ <code>VERSION 1</code> → ดู 2.5 (migrate)</li>
+    <li>error <code>...has no installed distributions</code> → ทำ 2.2</li>
+    <li>error เกี่ยวกับ feature → ดู 2.4 (troubleshoot virtualization)</li>
+  </ul>
+
+  <h3>2.2 ติดตั้ง WSL2 + Ubuntu</h3>
+  <p>เปิด PowerShell แบบ <strong>Run as Administrator</strong> แล้ว:</p>
+  <pre><code><span class="k">wsl</span> <span class="v">--install</span></code></pre>
+  <p>คำสั่งเดียวนี้จะ (อัตโนมัติ): เปิด feature <code>VirtualMachinePlatform</code> + <code>Microsoft-Windows-Subsystem-Linux</code> · ตั้ง default WSL version = 2 · download + install Ubuntu · ขอ reboot</p>
+  <p>หลัง reboot, Ubuntu จะเปิดเองและขอตั้ง username/password (UNIX account ไม่ใช่ Microsoft account) ถ้าอยากเลือก distro อื่น:</p>
+  <pre><code><span class="k">wsl</span> <span class="v">--list --online</span>                <span class="c"># ดู distro ที่ install ได้</span>
+<span class="k">wsl</span> <span class="v">--install -d</span> <span class="a">Ubuntu-24.04</span></code></pre>
+
+  <h3>2.3 ตั้ง default version + update</h3>
+  <pre><code><span class="k">wsl</span> <span class="v">--set-default-version</span> <span class="a">2</span>
+<span class="k">wsl</span> <span class="v">--update</span>
+<span class="k">wsl</span> <span class="v">-l -v</span></code></pre>
+  <p>ควรเห็น <code>STATE = Running/Stopped</code> และ <code>VERSION = 2</code></p>
+
+  <h3>2.4 Troubleshoot: virtualization ไม่เปิดใน BIOS</h3>
+  <p>ถ้า <code>wsl --install</code> แจ้ง error เกี่ยวกับ Hyper-V หรือ virtualization:</p>
+  <ol>
+    <li>เช็ค Task Manager → Performance → CPU → บรรทัด <strong>"Virtualization"</strong> ต้องเป็น <code>Enabled</code></li>
+    <li>ถ้า <code>Disabled</code>: รีสตาร์ทเข้า BIOS/UEFI (กด F2/Del/F10 ตอนบูต)</li>
+    <li>หาเมนู <code>Intel VT-x</code> / <code>AMD-V</code> / <code>SVM Mode</code> → enable → save → exit</li>
+    <li>กลับ Windows รัน <code>wsl --install</code> ใหม่</li>
+  </ol>
+  <p>ถ้ายังไม่ได้ เปิด feature ด้วยมือ (PowerShell as admin):</p>
+  <pre><code><span class="k">dism.exe</span> <span class="v">/online /enable-feature /featurename:</span><span class="a">Microsoft-Windows-Subsystem-Linux</span> <span class="v">/all /norestart</span>
+<span class="k">dism.exe</span> <span class="v">/online /enable-feature /featurename:</span><span class="a">VirtualMachinePlatform</span> <span class="v">/all /norestart</span></code></pre>
+  <p>แล้ว reboot</p>
+
+  <h3>2.5 Migrate WSL1 → WSL2</h3>
+  <pre><code><span class="k">wsl</span> <span class="v">--set-version</span> <span class="a">Ubuntu</span> <span class="a">2</span></code></pre>
+  <p>ใช้เวลา 5–30 นาทีขึ้นกับขนาด disk image รอจน <code>Conversion complete.</code> แล้วเช็ค <code>wsl -l -v</code></p>
+
+  <h3>2.6 ลง tmux ใน Ubuntu</h3>
+  <pre><code><span class="p">$</span> <span class="k">sudo apt</span> update
+<span class="p">$</span> <span class="k">sudo apt</span> install <span class="v">-y</span> <span class="a">tmux</span>
+<span class="p">$</span> <span class="k">tmux</span> <span class="v">-V</span></code></pre>
+  <p>ควรเห็น <code>tmux 3.x.x</code> ขึ้นไป — Ubuntu 22.04+ ได้ 3.2a เป็น default ซึ่งพอใช้ feature ในคู่มือนี้</p>
+
+  <h3>2.7 เริ่มใช้ครั้งแรก</h3>
+  <pre><code><span class="p">$</span> <span class="k">tmux</span>                          <span class="c"># เปิด session ไม่ตั้งชื่อ</span>
+<span class="p">$</span> <span class="k">tmux</span> new <span class="v">-s</span> <span class="a">test</span>              <span class="c"># เปิด session ชื่อ "test"</span></code></pre>
+  <p>ถ้าเห็นแถบสถานะสีเขียวด้านล่าง = ทำงานแล้ว ออกด้วย <kbd>Ctrl+d</kbd> หรือพิมพ์ <code>exit</code></p>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S3 ============================ -->
+<section class="chapter" id="s3">
+  <div class="ch-head"><div class="row"><div class="num">03</div><h2>tmux Basics</h2></div></div>
+
+  <h3>3.1 Prefix Key Concept</h3>
+  <p>ทุก keybinding ใน tmux ต้องกด <strong>prefix key</strong> ก่อน แล้วตามด้วย key สั่ง คล้าย leader key ใน Vim หรือ <kbd>Ctrl+x</kbd> ใน Emacs</p>
+  <table>
+    <thead><tr><th>Prefix</th><th>ที่มา</th><th>ข้อดี</th><th>ข้อเสีย</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>Ctrl+b</kbd></td><td>default ของ tmux</td><td>ไม่ชน Emacs convention</td><td>กดยาก (สองมือ), ไกลจากเหย้า</td></tr>
+      <tr><td><kbd>Ctrl+a</kbd></td><td>จาก GNU Screen</td><td>กดง่าย, ergonomic</td><td>ชนกับ bash "ไปต้นบรรทัด"</td></tr>
+    </tbody>
+  </table>
+  <div class="use"><span class="t">Why Ctrl+a</span>กดด้วยมือซ้ายเดียว (นิ้วก้อย + นิ้วชี้) ลดอาการล้า keystroke ที่ใช้บ่อยที่สุดหลังลง tmux — ตลอดคู่มือนี้ <code>prefix</code> = <kbd>Ctrl+a</kbd> และ <code>prefix + X</code> หมายถึงกด <kbd>Ctrl+a</kbd> ปล่อย แล้วกด <kbd>X</kbd></div>
+
+  <h3>3.2 Session</h3>
+  <table>
+    <thead><tr><th>Action</th><th>Command</th><th>Keybinding</th></tr></thead>
+    <tbody>
+      <tr><td>สร้าง session (ไม่ตั้งชื่อ)</td><td><code>tmux</code></td><td>—</td></tr>
+      <tr><td>สร้าง session + ตั้งชื่อ</td><td><code>tmux new -s NAME</code></td><td><code>prefix + S</code> (custom)</td></tr>
+      <tr><td>Detach (ออกแต่ยังรัน)</td><td>—</td><td><code>prefix + d</code></td></tr>
+      <tr><td>List session</td><td><code>tmux ls</code></td><td><code>prefix + s</code> (picker)</td></tr>
+      <tr><td>Attach ล่าสุด</td><td><code>tmux a</code></td><td>—</td></tr>
+      <tr><td>Attach ที่ระบุ</td><td><code>tmux a -t NAME</code></td><td>—</td></tr>
+      <tr><td>Rename session</td><td>—</td><td><code>prefix + $</code></td></tr>
+      <tr><td>Kill session ที่ระบุ</td><td><code>tmux kill-session -t NAME</code></td><td><code>prefix + K</code> (custom)</td></tr>
+      <tr><td>Kill <b>ทุก</b> session</td><td><code>tmux kill-server</code></td><td>—</td></tr>
+    </tbody>
+  </table>
+  <h4>Workflow ปกติ</h4>
+  <pre><code><span class="p">$</span> <span class="k">tmux</span> new <span class="v">-s</span> <span class="a">kmutt</span>             <span class="c"># เริ่มงาน</span>
+<span class="c"># ... ทำงาน ... กด prefix + d เพื่อ detach (session ยังรัน) ปิด terminal ได้เลย</span>
+
+<span class="c"># กลับมาทีหลัง:</span>
+<span class="p">$</span> <span class="k">tmux</span> ls                       <span class="c"># ดูว่ามี session อะไรอยู่</span>
+<span class="p">$</span> <span class="k">tmux</span> a <span class="v">-t</span> <span class="a">kmutt</span>               <span class="c"># attach กลับ — ทุกอย่างยังอยู่</span></code></pre>
+
+  <h3>3.3 Window</h3>
+  <p>Window คือ "tab" ภายใน session — มีหมายเลข (เริ่มที่ 1 ตาม config) และตั้งชื่อได้</p>
+  <table>
+    <thead><tr><th>Action</th><th>Keybinding</th></tr></thead>
+    <tbody>
+      <tr><td>สร้าง window ใหม่</td><td><code>prefix + c</code></td></tr>
+      <tr><td>ไป window N (1..9)</td><td><code>prefix + N</code></td></tr>
+      <tr><td>window ถัดไป / ก่อนหน้า</td><td><code>prefix + n</code> / <code>prefix + p</code></td></tr>
+      <tr><td>window ล่าสุด (toggle)</td><td><code>prefix + Tab</code> (custom)</td></tr>
+      <tr><td>list window แบบ picker</td><td><code>prefix + w</code></td></tr>
+      <tr><td>rename window</td><td><code>prefix + ,</code></td></tr>
+      <tr><td>find window ตามชื่อ</td><td><code>prefix + f</code></td></tr>
+      <tr><td>kill window</td><td><code>prefix + &amp;</code> (confirm)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.4 Pane</h3>
+  <p>Pane คือการ split window เป็นหลายช่อง terminal</p>
+  <table>
+    <thead><tr><th>Action</th><th>Keybinding</th></tr></thead>
+    <tbody>
+      <tr><td>Split vertical (ขวา)</td><td><code>prefix + |</code> (custom)</td></tr>
+      <tr><td>Split horizontal (ล่าง)</td><td><code>prefix + -</code> (custom)</td></tr>
+      <tr><td>ย้าย pane ซ้าย/ล่าง/บน/ขวา</td><td><code>prefix + h/j/k/l</code> (custom)</td></tr>
+      <tr><td>สลับ pane ล่าสุด</td><td><code>prefix + ;</code></td></tr>
+      <tr><td>Zoom pane (toggle เต็มจอ)</td><td><code>prefix + z</code></td></tr>
+      <tr><td>Resize ซ้าย/ล่าง/บน/ขวา</td><td><code>prefix + H/J/K/L</code> (custom, repeat)</td></tr>
+      <tr><td>Cycle layout</td><td><code>prefix + Space</code></td></tr>
+      <tr><td>แสดงหมายเลข pane</td><td><code>prefix + q</code></td></tr>
+      <tr><td>Convert pane เป็น window</td><td><code>prefix + !</code></td></tr>
+      <tr><td>Kill pane</td><td><code>prefix + X</code> (custom, confirm)</td></tr>
+    </tbody>
+  </table>
+  <div class="use"><span class="t">Why split ด้วย <code>|</code> กับ <code>-</code></span>mnemonic จำง่าย — <code>|</code> คือเส้นแบ่งแนวตั้ง, <code>-</code> คือเส้นแบ่งแนวนอน ต่างจาก default <code>%</code> กับ <code>"</code> ที่ไม่สื่อทิศทาง</div>
+
+  <h3>3.5 Copy Mode</h3>
+  <p>Copy mode คือโหมดอ่าน — เลื่อนดู scrollback, ค้นหา, คัดลอกข้อความ</p>
+  <table>
+    <thead><tr><th>Action</th><th>Keybinding</th></tr></thead>
+    <tbody>
+      <tr><td>เข้า / ออก copy mode</td><td><code>prefix + [</code> / <code>q</code> หรือ <code>Esc</code></td></tr>
+      <tr><td>เลื่อน บรรทัด / ตัวอักษร</td><td><code>k j</code> / <code>h l</code> (vi)</td></tr>
+      <tr><td>page up/down · บนสุด/ล่างสุด</td><td><code>Ctrl+u/Ctrl+d</code> · <code>g/G</code></td></tr>
+      <tr><td>ค้นหา fwd / bwd</td><td><code>/PATTERN</code> / <code>?PATTERN</code></td></tr>
+      <tr><td>ผลถัดไป / ก่อนหน้า</td><td><code>n</code> / <code>N</code></td></tr>
+      <tr><td>เริ่ม selection</td><td><code>v</code> (custom — vi visual)</td></tr>
+      <tr><td>Copy → Windows clipboard</td><td><code>y</code> (custom — pipe ไป <code>clip.exe</code>)</td></tr>
+      <tr><td>Paste จาก tmux buffer</td><td><code>prefix + ]</code></td></tr>
+    </tbody>
+  </table>
+  <div class="note"><span class="t">เกร็ด</span>เปิด <code>mouse on</code> แล้ว (ดู config) scroll wheel จะพา auto-enter copy mode และเลื่อน history ได้เลย ปล่อย mouse drag = พ่นเข้า Windows clipboard อัตโนมัติ</div>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S4 ============================ -->
+<section class="chapter" id="s4">
+  <div class="ch-head"><div class="row"><div class="num">04</div><h2>Configuration</h2></div></div>
+  <p>ไฟล์ <a href="https://github.com/tayakorn221/tmux-wsl2-handbook/blob/main/tmux.conf" target="_blank" rel="noopener"><code>tmux.conf</code></a> ที่แนบใน repo มี comment อธิบายทุกบรรทัด</p>
+
+  <h3>4.1 ติดตั้ง config</h3>
+  <pre><code><span class="c"># จาก WSL2 (สมมติ clone repo นี้มาที่ ~/tmux-wsl2-handbook/)</span>
+<span class="p">$</span> <span class="k">cp</span> ~/tmux-wsl2-handbook/tmux.conf ~/.tmux.conf
+
+<span class="c"># หรือ symlink (อัพเดต config ผ่าน git pull ได้ทันที)</span>
+<span class="p">$</span> <span class="k">ln</span> <span class="v">-s</span> ~/tmux-wsl2-handbook/tmux.conf ~/.tmux.conf</code></pre>
+
+  <h3>4.2 Reload config</h3>
+  <p>ถ้าอยู่ใน tmux session อยู่แล้ว ไม่ต้องปิด ใช้ keybinding ที่ตั้งไว้: <code>prefix + r</code> → จะ source <code>~/.tmux.conf</code> ใหม่ + แสดง <code>tmux.conf reloaded</code> ใน status bar</p>
+  <p>ถ้าอยู่นอก tmux (หรือ binding ยังไม่ทำงานเพราะเพิ่ง install):</p>
+  <pre><code><span class="p">$</span> <span class="k">tmux</span> source-file ~/.tmux.conf</code></pre>
+
+  <h3>4.3 สรุปสิ่งที่ config นี้เปลี่ยน</h3>
+  <table>
+    <thead><tr><th>หมวด</th><th>ค่า</th><th>เหตุผล</th></tr></thead>
+    <tbody>
+      <tr><td><b>Prefix</b></td><td><kbd>Ctrl+a</kbd> (จาก <kbd>Ctrl+b</kbd>)</td><td>กดง่ายกว่า, มือเดียว</td></tr>
+      <tr><td><b>Window/pane numbering</b></td><td>เริ่มที่ 1</td><td>ตรงกับลำดับปุ่ม <code>1..9</code></td></tr>
+      <tr><td><b>Renumber on close</b></td><td>on</td><td>ไม่มีรู gap หลังลบ window</td></tr>
+      <tr><td><b>Mouse</b></td><td>on</td><td>scroll, resize, click pane ได้</td></tr>
+      <tr><td><b>Scrollback</b></td><td>50,000 บรรทัด</td><td>logs dbt/docker ยาว ๆ ไม่หาย</td></tr>
+      <tr><td><b>Escape time</b></td><td>10ms</td><td>Neovim ไม่ค้างหลังกด <kbd>Esc</kbd></td></tr>
+      <tr><td><b>Split bindings</b></td><td><code>|</code> และ <code>-</code></td><td>mnemonic</td></tr>
+      <tr><td><b>Navigate / Resize panes</b></td><td><code>h/j/k/l</code> · <code>H/J/K/L</code></td><td>ตรงกับ Vim</td></tr>
+      <tr><td><b>Copy mode</b></td><td>vi keys, yank → <code>clip.exe</code></td><td>คัดลอกตรงเข้า Windows clipboard</td></tr>
+      <tr><td><b>Default terminal</b></td><td><code>tmux-256color</code> + RGB</td><td>สีของ Neovim/bat ถูกต้อง</td></tr>
+    </tbody>
+  </table>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S5 ============================ -->
+<section class="chapter" id="s5">
+  <div class="ch-head"><div class="row"><div class="num">05</div><h2>Workflow Templates</h2></div></div>
+  <p>ทุก template สร้าง session พร้อม pane layout ครบในคำสั่งเดียว ใช้ shell command ปกติ (ไม่ต้องลง plugin) — ก๊อปวางใน WSL2 ได้เลย</p>
+
+  <h3>5.1 Template: KMUTT DataPlatform session</h3>
+  <p><strong>เป้าหมาย:</strong> 1 session, 2 window — Window 1 <code>dbt</code>: 3 pane (Claude Code ซ้ายเต็มความสูง · dbt ขวาบน · psql ขวาล่าง) · Window 2 <code>logs</code>: ดู docker logs</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Layout ของ session KMUTT: window dbt มี 3 pane โดย Claude อยู่ซ้ายเต็มความสูง ขวาบนเป็น dbt ขวาล่างเป็น psql และมี window logs แยก">
+      <rect x="30" y="30" width="500" height="160" rx="10" fill="#faf7f1" stroke="#cbbfa8"/>
+      <rect x="46" y="46" width="220" height="128" rx="8" fill="#e2eeea" stroke="#0e6e63" stroke-width="1.4"/>
+      <text x="156" y="104" text-anchor="middle" class="lbl">Claude Code</text>
+      <text x="156" y="124" text-anchor="middle" class="mono">pane 1</text>
+      <rect x="278" y="46" width="236" height="58" rx="8" fill="#f8ecd8" stroke="#c07415" stroke-width="1.4"/>
+      <text x="396" y="72" text-anchor="middle" class="lbl">dbt runner</text>
+      <text x="396" y="90" text-anchor="middle" class="mono">pane 2</text>
+      <rect x="278" y="116" width="236" height="58" rx="8" fill="#fff" stroke="#54625f" stroke-width="1.3"/>
+      <text x="396" y="142" text-anchor="middle" class="lbl">psql shell</text>
+      <text x="396" y="160" text-anchor="middle" class="mono">pane 3</text>
+      <text x="46" y="20" class="mono-t">[window 1: dbt]</text>
+      <rect x="556" y="30" width="118" height="160" rx="10" fill="#faf7f1" stroke="#cbbfa8"/>
+      <rect x="568" y="46" width="94" height="128" rx="8" fill="#fff" stroke="#54625f" stroke-width="1.3"/>
+      <text x="615" y="104" text-anchor="middle" class="lbl">docker</text>
+      <text x="615" y="122" text-anchor="middle" class="lbl">logs</text>
+      <text x="556" y="20" class="mono-a">[window 2: logs]</text>
+    </svg>
+    <figcaption><b>FIG 5.1</b> — Layout ของ <code>kmutt</code> session · Claude เต็มความสูงซ้าย, dbt/psql ซ้อนขวา, logs แยก window — เก็บเป็น <code>~/bin/kmutt-up.sh</code> เรียกครั้งเดียวจบ</figcaption>
+  </figure>
+
+  <pre><code><span class="c"># ปรับ path ตามจริง</span>
+<span class="v">PROJECT_DIR</span>=<span class="a">"$HOME/projects/kmutt-dataplatform"</span>
+<span class="v">PG_USER</span>=<span class="a">"postgres"</span>; <span class="v">PG_DB</span>=<span class="a">"dataplatform"</span>
+
+<span class="c"># สร้าง session + window แรก ที่ pane เริ่มต้นรัน claude</span>
+<span class="k">tmux</span> new-session <span class="v">-d -s</span> <span class="a">kmutt</span> <span class="v">-n</span> <span class="a">dbt</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">kmutt:dbt</span> <span class="a">'claude'</span> C-m
+
+<span class="c"># split ขวา (pane 2) สำหรับ dbt</span>
+<span class="k">tmux</span> split-window <span class="v">-h -t</span> <span class="a">kmutt:dbt</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">kmutt:dbt.2</span> <span class="a">'source .venv/bin/activate &amp;&amp; dbt debug'</span> C-m
+
+<span class="c"># split ขวาล่าง (pane 3) สำหรับ psql</span>
+<span class="k">tmux</span> split-window <span class="v">-v -t</span> <span class="a">kmutt:dbt.2</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">kmutt:dbt.3</span> <span class="a">"psql -h localhost -U $PG_USER -d $PG_DB"</span> C-m
+
+<span class="c"># window 2 — logs</span>
+<span class="k">tmux</span> new-window <span class="v">-t</span> <span class="a">kmutt</span> <span class="v">-n</span> <span class="a">logs</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">kmutt:logs</span> <span class="a">'docker compose logs -f'</span> C-m
+
+<span class="c"># focus กลับ window แรก pane Claude แล้ว attach</span>
+<span class="k">tmux</span> select-window <span class="v">-t</span> <span class="a">kmutt:dbt</span>; <span class="k">tmux</span> select-pane <span class="v">-t</span> <span class="a">kmutt:dbt.1</span>
+<span class="k">tmux</span> attach <span class="v">-t</span> <span class="a">kmutt</span></code></pre>
+  <p>เก็บเป็น script <code>~/bin/kmutt-up.sh</code> แล้ว <code>chmod +x</code> — เรียกครั้งเดียวจบ</p>
+
+  <h3>5.2 Template: Next.js Freelance Project</h3>
+  <p><strong>เป้าหมาย:</strong> Window 1 <code>dev</code>: 4 pane (Claude / <code>npm run dev</code> / git / db client) · Window 2 <code>prisma</code>: prisma studio</p>
+  <pre><code><span class="v">PROJECT_DIR</span>=<span class="a">"$HOME/projects/freelance-app"</span>
+<span class="k">tmux</span> new-session <span class="v">-d -s</span> <span class="a">nextjs</span> <span class="v">-n</span> <span class="a">dev</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">nextjs:dev</span> <span class="a">'claude'</span> C-m                 <span class="c"># pane 1 ซ้ายบน</span>
+<span class="k">tmux</span> split-window <span class="v">-h -t</span> <span class="a">nextjs:dev</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">nextjs:dev.2</span> <span class="a">'npm run dev'</span> C-m          <span class="c"># pane 2 ขวาบน</span>
+<span class="k">tmux</span> split-window <span class="v">-v -t</span> <span class="a">nextjs:dev.1</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">nextjs:dev.3</span> <span class="a">'git status'</span> C-m          <span class="c"># pane 3 ซ้ายล่าง</span>
+<span class="k">tmux</span> split-window <span class="v">-v -t</span> <span class="a">nextjs:dev.2</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">nextjs:dev.4</span> <span class="a">'pgcli postgres://app:app@localhost:5432/app'</span> C-m
+<span class="k">tmux</span> new-window <span class="v">-t</span> <span class="a">nextjs</span> <span class="v">-n</span> <span class="a">prisma</span> <span class="v">-c</span> <span class="a">"$PROJECT_DIR"</span>
+<span class="k">tmux</span> send-keys <span class="v">-t</span> <span class="a">nextjs:prisma</span> <span class="a">'npx prisma studio'</span> C-m
+<span class="k">tmux</span> select-window <span class="v">-t</span> <span class="a">nextjs:dev</span>; <span class="k">tmux</span> select-pane <span class="v">-t</span> <span class="a">nextjs:dev.1</span>
+<span class="k">tmux</span> attach <span class="v">-t</span> <span class="a">nextjs</span></code></pre>
+  <p>หลัง <code>npm run dev</code> ขึ้นมาแล้ว เปิด Chrome บน Windows ที่ <code>http://localhost:3000</code> — WSL2 forward port ให้อัตโนมัติ (ดู 6.4)</p>
+
+  <h3>5.3 Template: Daily Standup Workflow</h3>
+  <p>ใช้ tmux ให้ครบ cycle ของวัน — เลิกงาน detach, วันถัดไป attach กลับ</p>
+  <table>
+    <thead><tr><th>ช่วงเวลา</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>เช้า (วันแรก)</td><td><code>~/bin/kmutt-up.sh</code> หรือ <code>~/bin/nextjs-up.sh</code></td></tr>
+      <tr><td>ไปทานข้าว/ประชุม</td><td><code>prefix + d</code> (detach — ทุกอย่างยังรัน) ปิด Windows Terminal/ฝา laptop ได้</td></tr>
+      <tr><td>กลับมาทำต่อ</td><td><code>tmux ls</code> → <code>tmux a -t kmutt</code></td></tr>
+      <tr><td>เลิกงาน</td><td><code>prefix + d</code> · <b>อย่ารัน <code>wsl --shutdown</code></b></td></tr>
+      <tr><td>สิ้นสัปดาห์ clean</td><td><code>tmux kill-session -t nextjs</code> หรือ <code>tmux kill-server</code></td></tr>
+    </tbody>
+  </table>
+  <div class="warn"><span class="t">Why ไม่ใช้แค่ Windows Terminal tab</span>tab ของ Windows Terminal ผูกกับ process Windows — ปิดหน้าต่าง = ทุก process ใน WSL ตาย แต่ tmux session อยู่ฝั่ง Linux ตราบใดที่ WSL2 ไม่ shutdown session ยังอยู่ครบ</div>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S6 ============================ -->
+<section class="chapter" id="s6">
+  <div class="ch-head"><div class="row"><div class="num">06</div><h2>WSL2 ↔ Windows Integration</h2></div></div>
+
+  <h3>6.1 Filesystem: <code>/home/</code> vs <code>/mnt/c/</code></h3>
+
+  <figure class="fig">
+    <svg viewBox="0 0 700 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="เปรียบเทียบ filesystem: /home บน ext4 ใน VHDX เร็วมาก ส่วน /mnt/c เข้าถึง Windows drive ผ่าน 9P protocol ช้ามาก">
+      <rect x="30" y="40" width="300" height="130" rx="11" fill="#e2eeea" stroke="#0e6e63" stroke-width="1.6"/>
+      <text x="180" y="68" text-anchor="middle" class="lbl">/home/&lt;user&gt;/</text>
+      <text x="180" y="90" text-anchor="middle" class="sub">ext4 ใน VHDX ของ Linux (native)</text>
+      <text x="180" y="120" text-anchor="middle" class="mono-t">เร็วมาก ⚡</text>
+      <text x="180" y="142" text-anchor="middle" class="sub">เก็บ project ทั้งหมด — git, node_modules, .venv</text>
+      <rect x="370" y="40" width="300" height="130" rx="11" fill="#f6e3de" stroke="#b3402e" stroke-width="1.6"/>
+      <text x="520" y="68" text-anchor="middle" class="lbl">/mnt/c/ , /mnt/d/</text>
+      <text x="520" y="90" text-anchor="middle" class="sub">Windows drive ผ่าน 9P protocol</text>
+      <text x="520" y="120" text-anchor="middle" class="mono" fill="#b3402e">ช้ามาก 🐌 (10–20× ช้ากว่า)</text>
+      <text x="520" y="142" text-anchor="middle" class="sub">แค่เข้าถึงไฟล์ Windows ชั่วคราว (Excel/PDF)</text>
+    </svg>
+    <figcaption><b>FIG 6.1</b> — <b>กฎทอง:</b> ห้ามเก็บโค้ดที่ทำงานทุกวันใน <code>/mnt/c/</code> เพราะ <code>npm install</code>, <code>git status</code>, <code>dbt run</code> จะช้าจนใช้ไม่ได้</figcaption>
+  </figure>
+
+  <p>ถ้าโปรเจกต์เดิมอยู่ใน <code>/mnt/c/Users/.../</code> ย้ายเข้า Linux FS:</p>
+  <pre><code><span class="p">$</span> <span class="k">mkdir</span> <span class="v">-p</span> ~/projects
+<span class="p">$</span> <span class="k">mv</span> /mnt/c/Users/STUDENT/Documents/myproject ~/projects/</code></pre>
+
+  <h3>6.2 เข้าถึงไฟล์ WSL จาก Windows</h3>
+  <p>ใน File Explorer พิมพ์ใน address bar: <code>\\wsl$\Ubuntu\home\&lt;user&gt;\</code> หรือบน Windows 11: <code>\\wsl.localhost\Ubuntu\home\&lt;user&gt;\</code> · ทางลัดจาก WSL terminal:</p>
+  <pre><code><span class="p">$</span> <span class="k">explorer.exe</span> .          <span class="c"># เปิด Explorer ที่ folder ปัจจุบัน</span></code></pre>
+
+  <h3>6.3 VS Code Remote-WSL</h3>
+  <p><strong>Install (ครั้งเดียว):</strong> ลง VS Code บน Windows → ติดตั้ง extension <strong>"WSL"</strong> (Microsoft) → restart · <strong>ใช้งาน</strong> จาก WSL terminal:</p>
+  <pre><code><span class="p">$</span> <span class="k">cd</span> ~/projects/kmutt-dataplatform
+<span class="p">$</span> <span class="k">code</span> .</code></pre>
+  <p>ครั้งแรก VS Code จะ install vscode-server ใน WSL อัตโนมัติ — extension (Python, Node, debugger) รันฝั่ง Linux ส่วน UI ฝั่ง Windows · เช็คมุมล่างซ้ายขึ้น <code>WSL: Ubuntu</code></p>
+
+  <h3>6.4 Network: localhost Port Forwarding</h3>
+  <p>Windows 11 + WSL2 รุ่นใหม่มี <strong>localhost relay อัตโนมัติ</strong> — เปิด server ใน WSL ที่ <code>0.0.0.0:3000</code> แล้วเปิด Chrome ฝั่ง Windows ที่ <code>http://localhost:3000</code> เห็นทันที</p>
+  <div class="warn"><span class="t">ถ้าใช้ไม่ได้ (ดู 8.5)</span>เช็คว่า server bind <code>0.0.0.0</code> ไม่ใช่ <code>127.0.0.1</code> (บาง framework default 127.0.0.1) · รีสตาร์ท <code>wsl --shutdown</code> · ปิด Windows Defender Firewall ทดสอบช่วงสั้น ๆ</div>
+
+  <h3>6.5 เปิด Windows app จาก WSL</h3>
+  <table>
+    <thead><tr><th>คำสั่งใน WSL</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><code>explorer.exe .</code></td><td>เปิด File Explorer ที่ folder ปัจจุบัน</td></tr>
+      <tr><td><code>code .</code></td><td>เปิด VS Code Remote-WSL</td></tr>
+      <tr><td><code>clip.exe &lt; file.txt</code></td><td>copy เนื้อหาไฟล์เข้า Windows clipboard</td></tr>
+      <tr><td><code>cmd.exe /c start https://...</code></td><td>เปิด URL ด้วย default browser</td></tr>
+      <tr><td><code>wslview &lt;file&gt;</code></td><td>เปิดด้วย default Windows app (เหมือน <code>xdg-open</code>)</td></tr>
+    </tbody>
+  </table>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S7 ============================ -->
+<section class="chapter" id="s7">
+  <div class="ch-head"><div class="row"><div class="num">07</div><h2>Cheat Sheet</h2></div></div>
+  <div class="use"><span class="t">หน้าเดียวจบ</span>ครอบคลุม 80% ของการใช้งานประจำวัน พิมพ์แปะข้างจอได้ · <strong>Prefix = <kbd>Ctrl+a</kbd></strong> (กดแล้วปล่อย ตามด้วย key สั่ง)</div>
+
+  <h3>Top 10 Commands (จากนอก tmux)</h3>
+  <table>
+    <thead><tr><th>#</th><th>คำสั่ง</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>tmux new -s NAME</code></td><td>สร้าง session ใหม่พร้อมตั้งชื่อ</td></tr>
+      <tr><td>2</td><td><code>tmux ls</code></td><td>ดูว่ามี session อะไรอยู่</td></tr>
+      <tr><td>3</td><td><code>tmux a</code></td><td>attach session ล่าสุด</td></tr>
+      <tr><td>4</td><td><code>tmux a -t NAME</code></td><td>attach session ที่ระบุ</td></tr>
+      <tr><td>5</td><td><code>tmux kill-session -t NAME</code></td><td>ลบเฉพาะ session</td></tr>
+      <tr><td>6</td><td><code>tmux kill-server</code></td><td>ลบ tmux ทั้งหมด</td></tr>
+      <tr><td>7</td><td><code>tmux source ~/.tmux.conf</code></td><td>reload config จากนอก tmux</td></tr>
+      <tr><td>8</td><td><code>tmux -V</code></td><td>เช็คเวอร์ชัน</td></tr>
+      <tr><td>9</td><td><code>wsl -l -v</code></td><td>(PowerShell) เช็คสถานะ WSL distro</td></tr>
+      <tr><td>10</td><td><code>wsl --shutdown</code></td><td>(PowerShell) shutdown WSL ทั้งหมด — ใช้ตอน RAM บวม</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Quick Reference (ใน tmux — กด prefix ก่อน)</h3>
+  <h4>Session</h4>
+  <table><thead><tr><th>Keys</th><th>Action</th></tr></thead><tbody>
+    <tr><td><code>d</code></td><td>detach (session ยังรัน)</td></tr>
+    <tr><td><code>s</code></td><td>list/switch session</td></tr>
+    <tr><td><code>$</code></td><td>rename session</td></tr>
+    <tr><td><code>S</code></td><td>สร้าง session ใหม่ (custom)</td></tr>
+    <tr><td><code>K</code></td><td>kill session ปัจจุบัน (custom)</td></tr>
+  </tbody></table>
+  <h4>Window (= tab)</h4>
+  <table><thead><tr><th>Keys</th><th>Action</th></tr></thead><tbody>
+    <tr><td><code>c</code></td><td>สร้าง window ใหม่</td></tr>
+    <tr><td><code>1..9</code></td><td>ไป window N</td></tr>
+    <tr><td><code>n</code> / <code>p</code></td><td>window ถัดไป / ก่อนหน้า</td></tr>
+    <tr><td><code>Tab</code></td><td>window ล่าสุด (toggle)</td></tr>
+    <tr><td><code>,</code></td><td>rename window</td></tr>
+    <tr><td><code>w</code></td><td>list/switch window</td></tr>
+    <tr><td><code>&amp;</code></td><td>kill window</td></tr>
+  </tbody></table>
+  <h4>Pane (= split)</h4>
+  <table><thead><tr><th>Keys</th><th>Action</th></tr></thead><tbody>
+    <tr><td><code>|</code></td><td>split vertical (ขวา)</td></tr>
+    <tr><td><code>-</code></td><td>split horizontal (ล่าง)</td></tr>
+    <tr><td><code>h j k l</code></td><td>นาวิเกตซ้าย/ล่าง/บน/ขวา</td></tr>
+    <tr><td><code>H J K L</code></td><td>resize (กดค้างได้)</td></tr>
+    <tr><td><code>z</code></td><td>zoom (toggle pane เต็มจอ)</td></tr>
+    <tr><td><code>Space</code></td><td>cycle layout</td></tr>
+    <tr><td><code>q</code></td><td>แสดงเลข pane</td></tr>
+    <tr><td><code>;</code></td><td>สลับ pane ล่าสุด</td></tr>
+    <tr><td><code>X</code></td><td>kill pane (custom)</td></tr>
+  </tbody></table>
+  <h4>Copy mode &amp; Misc</h4>
+  <table><thead><tr><th>Keys</th><th>Action</th></tr></thead><tbody>
+    <tr><td><code>[</code></td><td>เข้า copy mode (<code>q</code>/<code>Esc</code> ออก)</td></tr>
+    <tr><td><code>/</code> , <code>?</code></td><td>ค้นหา fwd / bwd (<code>n</code>/<code>N</code> ผลถัดไป)</td></tr>
+    <tr><td><code>v</code> → <code>y</code></td><td>select → yank เข้า Windows clipboard</td></tr>
+    <tr><td><code>]</code></td><td>paste จาก tmux buffer</td></tr>
+    <tr><td><code>r</code></td><td>reload <code>~/.tmux.conf</code> (custom)</td></tr>
+    <tr><td><code>?</code></td><td>แสดง keybinding ทั้งหมด</td></tr>
+    <tr><td><code>:</code></td><td>command prompt</td></tr>
+  </tbody></table>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S8 ============================ -->
+<section class="chapter" id="s8">
+  <div class="ch-head"><div class="row"><div class="num">08</div><h2>Troubleshooting</h2></div></div>
+
+  <h3>8.1 tmux session ค้าง, ต้อง kill ทุก session</h3>
+  <pre><code><span class="p">$</span> <span class="k">tmux</span> kill-server
+<span class="c"># ถ้า tmux ls / tmux a ค้าง:</span>
+<span class="p">$</span> <span class="k">pkill</span> <span class="v">-9</span> tmux                            <span class="c"># ฆ่า process ทั้งหมด</span>
+<span class="p">$</span> <span class="k">rm</span> <span class="v">-rf</span> /tmp/tmux-$(id -u)                <span class="c"># ลบ socket directory</span>
+<span class="p">$</span> <span class="k">tmux</span> ls                                  <span class="c"># ควรเห็น "no server running"</span></code></pre>
+
+  <h3>8.2 Config ไม่ reload หลังแก้</h3>
+  <pre><code><span class="c"># 1. ทดสอบ syntax (ถ้า error จะ print ออกมา)</span>
+<span class="p">$</span> <span class="k">tmux</span> source-file ~/.tmux.conf
+<span class="c"># 2. เช็คว่า binding ถูก register หรือยัง</span>
+<span class="p">$</span> <span class="k">tmux</span> list-keys | <span class="k">grep</span> <span class="v">-i</span> <span class="a">"source-file"</span>
+<span class="c"># 3. อยู่ใน session ที่ start ก่อนเพิ่ม binding? → ใช้คำสั่งใน 1 หรือ kill-server แล้วเปิดใหม่</span></code></pre>
+
+  <h3>8.3 WSL2 กิน RAM เยอะเกินไป</h3>
+  <p>WSL2 จอง RAM แบบ dynamic แต่ไม่คืนให้ Windows ทันที — สร้าง <code>C:\Users\&lt;WindowsUser&gt;\.wslconfig</code>:</p>
+  <pre><code><span class="k">[wsl2]</span>
+<span class="v">memory</span>=<span class="a">8GB</span>              <span class="c"># cap RAM (เครื่อง 16GB ใช้ 8GB, 32GB ใช้ 16GB)</span>
+<span class="v">processors</span>=<span class="a">4</span>            <span class="c"># cap จำนวน vCPU</span>
+<span class="v">swap</span>=<span class="a">4GB</span>
+<span class="v">localhostForwarding</span>=<span class="a">true</span></code></pre>
+  <p>แล้วบังคับ apply: <code>wsl --shutdown</code> → เปิด WSL ใหม่ · <code>.wslconfig</code> มีผลทุก distro ภายใต้ WSL2</p>
+
+  <h3>8.4 ใช้ <code>wsl --shutdown</code> ตอนไหน</h3>
+  <table>
+    <thead><tr><th>ใช้เมื่อ ✓</th><th>ห้ามใช้เมื่อ ✗</th></tr></thead>
+    <tbody>
+      <tr><td>เพิ่งแก้ <code>.wslconfig</code> ต้องการ apply</td><td>มี tmux session ที่ยังไม่อยากให้ตาย (จะถูก SIGKILL ทันที)</td></tr>
+      <tr><td>RAM ของ WSL2 บวม ต้องการคืนให้ Windows</td><td>กำลังมี long-running job (dbt seed, npm build) → งานพัง</td></tr>
+      <tr><td>WSL2 hang / network เพี้ยน</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.5 Port ใน WSL ไม่ถึง Windows browser</h3>
+  <pre><code><span class="c"># 1. Server bind ที่อะไร?</span>
+<span class="p">$</span> <span class="k">ss</span> <span class="v">-tlnp</span> | <span class="k">grep</span> <span class="a">3000</span>
+<span class="c">#    ต้องเห็น 0.0.0.0:3000 หรือ *:3000 — ถ้า 127.0.0.1:3000 ให้แก้ framework ให้ bind 0.0.0.0</span>
+
+<span class="c"># 2. Firewall block? (PowerShell as admin, ทดสอบชั่วคราว)</span>
+<span class="k">New-NetFirewallRule</span> <span class="v">-DisplayName</span> <span class="a">"WSL2 dev"</span> <span class="v">-Direction</span> Inbound <span class="v">-Action</span> Allow <span class="v">-Protocol</span> TCP <span class="v">-LocalPort</span> <span class="a">3000</span>
+
+<span class="c"># 3. รีสตาร์ท WSL</span>
+<span class="k">wsl</span> <span class="v">--shutdown</span>
+
+<span class="c"># 4. Windows 11 บางเวอร์ชันมี bug — เพิ่ม manual port proxy (admin)</span>
+<span class="v">$wslIp</span> = (wsl hostname -I).Trim().Split()[0]
+<span class="k">netsh</span> interface portproxy add v4tov4 listenport=<span class="a">3000</span> listenaddress=<span class="a">0.0.0.0</span> connectport=<span class="a">3000</span> connectaddress=<span class="v">$wslIp</span></code></pre>
+
+  <h3>8.6 Clock skew หลัง laptop sleep</h3>
+  <p>อาการ: หลัง wake from sleep ใช้ <code>git</code>, <code>npm</code>, <code>apt</code>, JWT auth พัง เพราะเวลาใน WSL2 ห่างจาก Windows หลายชั่วโมง</p>
+  <pre><code><span class="c"># แก้ทันที</span>
+<span class="p">$</span> <span class="k">sudo hwclock</span> <span class="v">-s</span>          <span class="c"># อ่านเวลาจาก hardware clock (= Windows)</span>
+
+<span class="c"># แก้ถาวร — systemd-timesyncd (Ubuntu 22.04+ มีให้แล้ว)</span>
+<span class="p">$</span> <span class="k">sudo apt</span> install <span class="v">-y</span> <span class="a">systemd-timesyncd</span>
+<span class="p">$</span> <span class="k">sudo systemctl</span> enable <span class="v">--now</span> systemd-timesyncd
+<span class="p">$</span> <span class="k">timedatectl</span> status</code></pre>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<!-- ============================ S9 ============================ -->
+<section class="chapter" id="s9">
+  <div class="ch-head"><div class="row"><div class="num">09</div><h2>ขั้นต่อไป (Advanced)</h2></div></div>
+  <p>เมื่อใช้ tmux จนคล่อง ค่อยลองเพิ่ม:</p>
+
+  <h3>9.1 tpm (tmux Plugin Manager)</h3>
+  <p>จัดการ plugin tmux ด้วย git ผ่าน 1 บรรทัดใน <code>.tmux.conf</code></p>
+  <pre><code><span class="p">$</span> <span class="k">git clone</span> https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm</code></pre>
+  <p>เพิ่มท้าย <code>~/.tmux.conf</code>:</p>
+  <pre><code><span class="k">set</span> <span class="v">-g</span> @plugin <span class="a">'tmux-plugins/tpm'</span>
+<span class="k">set</span> <span class="v">-g</span> @plugin <span class="a">'tmux-plugins/tmux-sensible'</span>
+<span class="k">run</span> <span class="a">'~/.tmux/plugins/tpm/tpm'</span></code></pre>
+  <p>Install plugin: <code>prefix + I</code> (capital i)</p>
+
+  <h3>9.2 tmux-resurrect + tmux-continuum</h3>
+  <p><strong>ปัญหา:</strong> <code>wsl --shutdown</code> แล้ว session หายหมด ต้อง bootstrap ใหม่ · <strong>แก้:</strong> 2 plugin นี้ save/restore session อัตโนมัติทุก 15 นาที — เปิด tmux แล้วทุก window/pane กลับมาเลย</p>
+  <pre><code><span class="k">set</span> <span class="v">-g</span> @plugin <span class="a">'tmux-plugins/tmux-resurrect'</span>
+<span class="k">set</span> <span class="v">-g</span> @plugin <span class="a">'tmux-plugins/tmux-continuum'</span>
+<span class="k">set</span> <span class="v">-g</span> @continuum-restore <span class="a">'on'</span></code></pre>
+  <p><code>prefix + Ctrl+s</code> save, <code>prefix + Ctrl+r</code> restore (manual)</p>
+
+  <h3>9.3 tmuxinator / tmuxp</h3>
+  <p>แทนที่ shell script ใน Section 5 ด้วย YAML declarative — config อ่านง่ายและ portable · <strong>tmuxinator</strong> (Ruby): <code>mux kmutt</code> · <strong>tmuxp</strong> (Python): <code>tmuxp load nextjs</code></p>
+  <div class="note"><span class="t">แนะนำ tmuxp</span>ถ้าคุณใช้ Python ใน data stack อยู่แล้ว — ไม่ต้องลง Ruby เพิ่ม</div>
+  <pre><code><span class="c"># ~/.tmuxp/kmutt.yaml</span>
+<span class="v">session_name</span>: <span class="a">kmutt</span>
+<span class="v">start_directory</span>: <span class="a">~/projects/kmutt-dataplatform</span>
+<span class="v">windows</span>:
+  - <span class="v">window_name</span>: <span class="a">dbt</span>
+    <span class="v">layout</span>: <span class="a">main-vertical</span>
+    <span class="v">panes</span>:
+      - <span class="a">claude</span>
+      - <span class="a">source .venv/bin/activate &amp;&amp; dbt debug</span>
+      - <span class="a">psql -h localhost -U postgres -d dataplatform</span>
+  - <span class="v">window_name</span>: <span class="a">logs</span>
+    <span class="v">panes</span>:
+      - <span class="a">docker compose logs -f</span></code></pre>
+
+  <h3>9.4 Integration กับ Neovim</h3>
+  <p>ใน <code>init.lua</code> เพิ่ม plugin <code>christoomey/vim-tmux-navigator</code> — กด <kbd>Ctrl+h/j/k/l</kbd> จะ navigate ข้าม Neovim split ↔ tmux pane ได้แบบไร้รอยต่อ (ไม่ต้องกด prefix) · ใน <code>.tmux.conf</code> ต้องเพิ่ม smart-detect (ดูเอกสาร plugin) — power-user setup ที่คุ้มสุด ๆ ถ้าใช้ Neovim เป็นหลัก</p>
+  <div class="chapter-end">· · ·</div>
+</section>
+
+<footer>
+  <p><b>tmux · WSL2 Handbook</b> — คู่มืออ้างอิงฉบับเข้าใจถึงแก่น · single source of truth</p>
+  <p>Stack: WSL2 (Ubuntu) · Claude Code · dbt Core · PostgreSQL · Next.js · Docker · ทดสอบกับ Ubuntu 22.04/24.04, tmux 3.2a/3.4</p>
+  <p>config เต็ม: <a href="https://github.com/tayakorn221/tmux-wsl2-handbook/blob/main/tmux.conf" target="_blank" rel="noopener">tmux.conf</a> · ส่วนหนึ่งของชุด <a href="https://tayakorn221.github.io/handbooks/" target="_blank" rel="noopener">คู่มือฉบับเข้าใจถึงแก่น</a></p>
+  <p style="font-family:'IBM Plex Mono',monospace;color:var(--line2);margin-top:.6rem;font-size:.8rem">9 sections · Single HTML</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+const bar=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'},{passive:true});
+const links=[...document.querySelectorAll('.toc li a')];
+const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+const spy=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'-15% 0px -75% 0px'});
+secs.forEach(s=>s&&spy.observe(s));
+const tt=document.getElementById('tocToggle'),toc=document.getElementById('toc');
+tt.addEventListener('click',()=>toc.classList.toggle('open'));
+toc.addEventListener('click',e=>{if(e.target.closest('a'))toc.classList.remove('open')});
+</script>
+</body>
+</html>
